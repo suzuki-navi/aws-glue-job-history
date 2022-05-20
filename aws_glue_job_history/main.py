@@ -32,7 +32,14 @@ def boto3_session(profile, region):
     return session
 
 def print_job_history(glue_client):
-    jobs = glue_client.get_jobs()
+    jobs = []
+    res = glue_client.get_jobs()
+    while True:
+        for elem in res["Jobs"]:
+            jobs.append(elem["Name"])
+        if "NextToken" not in res:
+            break
+        res = glue_client.get_jobs(NextToken=res["NextToken"])
 
     header = [
         "started",
@@ -48,37 +55,40 @@ def print_job_history(glue_client):
 
     result = []
 
-    for job in jobs["Jobs"]:
-        name = job["Name"]
-        history = glue_client.get_job_runs(JobName = name)
-        for run in history["JobRuns"]:
-            started = run["StartedOn"].strftime("%Y-%m-%d %H:%M:%S")
-            if "CompletedOn" in run:
-                completed = run["CompletedOn"].strftime("%Y-%m-%d %H:%M:%S")
-            else:
-                completed = ""
-            executionTime = str(run["ExecutionTime"])
-            if executionTime == "0":
-                executionTime = ""
-            status = run["JobRunState"]
-            if "ErrorMessage" in run:
-                errorMessage = run["ErrorMessage"]
-            else:
-                errorMessage = ""
-            allocatedCapacity = str(run["AllocatedCapacity"])
-            maxCapacity = str(run["MaxCapacity"])
-            glueVersion = str(run["GlueVersion"])
-            result.append([
-                started,
-                completed,
-                executionTime,
-                status,
-                name,
-                allocatedCapacity,
-                maxCapacity,
-                glueVersion,
-                errorMessage,
-            ])
+    for job_name in jobs:
+        res = glue_client.get_job_runs(JobName=job_name)
+        while True:
+            for run in res["JobRuns"]:
+                started = run["StartedOn"].strftime("%Y-%m-%d %H:%M:%S")
+                if "CompletedOn" in run:
+                    completed = run["CompletedOn"].strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    completed = ""
+                executionTime = str(run["ExecutionTime"])
+                if executionTime == "0":
+                    executionTime = ""
+                status = run["JobRunState"]
+                if "ErrorMessage" in run:
+                    errorMessage = run["ErrorMessage"]
+                else:
+                    errorMessage = ""
+                allocatedCapacity = str(run["AllocatedCapacity"])
+                maxCapacity = str(run["MaxCapacity"])
+                glueVersion = str(run["GlueVersion"])
+                result.append([
+                    started,
+                    completed,
+                    executionTime,
+                    status,
+                    job_name,
+                    allocatedCapacity,
+                    maxCapacity,
+                    glueVersion,
+                    errorMessage,
+                ])
+            if "NextToken" not in res:
+                break
+            res = glue_client.get_job_runs(JobName=job_name, NextToken=res["NextToken"])
 
     result.sort(key = lambda r: r[0])
 
