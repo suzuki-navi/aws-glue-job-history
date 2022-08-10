@@ -4,7 +4,7 @@ A tool that print the execution history of AWS Glue Jobs as a tab separated form
 
 ## Installation
 
-    $ pip install git+https://github.com/suzuki-navi/aws-glue-job-history
+    $ pip install aws-glue-job-history
 
 ## Usage
 
